@@ -7,7 +7,8 @@ HyperBeta explots graph theory to identify the beta sheets, and was specifically
 
 - Open HyperBeta's GUI by launching the gui.py script. 
 - Specify the number of aminoacids in the peptides
-- Launch the analysis
+- Open the GROMACS file containing the molecular dynamics
+- Launch the analysis on the GROMACS file
 - Run Hyperbeta's Visualization Tool (HVT)
 
 # Further information
