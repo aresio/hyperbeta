@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="base">
+    <file>components_on.tga</file>
+    <file>grains_on.tga</file>
+    <file>banner.png</file>
+  </qresource>
+</RCC>
