@@ -370,7 +370,7 @@ void draw_bounding_box() {
 
 
 /* Draw the sticks connecting the triples */
-void drawsticks(bool inverted) {
+void draw_sticks(bool inverted) {
 
 	unsigned int frame_to_render = get_frame_to_render(inverted);
 	
@@ -481,7 +481,7 @@ void draw_selected_peptide(GLint mode, bool inverted) {
 
 
 /* Draw the grains cloud */
-void drawpoints(GLint mode, bool inverted) {
+void draw_points(GLint mode, bool inverted) {
 
 	unsigned int frame_to_render = get_frame_to_render(inverted);
 
@@ -558,9 +558,49 @@ void drawpoints(GLint mode, bool inverted) {
 }
 
 
+/// Draw the beta-boxes 
+void draw_boxes(bool const inverted) {
+	
+	unsigned int frame_to_render = get_frame_to_render(inverted);
+
+	RenderState.set_culling(GL_FALSE);
+	glColor4fv((GLfloat*)beta_colors);
+
+	for (unsigned int box = 0; box < vec_boxes[frame_to_render].size(); box++) {
+
+		glBegin(GL_TRIANGLE_STRIP);
+	
+		for (unsigned int trait = 0; trait < vec_boxes[frame_to_render][box]->size(); trait++) {
+
+			unsigned int index = vec_boxes[frame_to_render][box]->at(trait);
+
+			float cx, cy, cz;
+			cx = point_clouds[frame_to_render][index].r;
+			cy = point_clouds[frame_to_render][index].g;
+			cz = point_clouds[frame_to_render][index].b;
+
+			glVertex3f(cx, cy, cz);
+
+			// printf("[Snapshot %d] [box: %d] [trait: %d] [index: %d], %.2f, %.2f, %.2f\n", frame_to_render, box, trait, index, cx, cy, cz);
+
+		}
+
+		// printf("\n");
+
+		glEnd();
+
+	}
+
+	RenderState.recover_culling();
+
+	
+
+}
+
+
 
 /// Draw the beta-structures
-void drawstructures(GLint const mode, bool const inverted) {
+void draw_structures(GLint const mode, bool const inverted) {
 
 	unsigned int frame_to_render = get_frame_to_render(inverted);
 	
@@ -677,7 +717,7 @@ void create_options() {
 		"images/fog_on.tga",
 		"images/fog_off.tga",
 		switch_fog,
-		false,
+		use_fog,
 		true
 	);
 
@@ -717,7 +757,7 @@ void create_options() {
 		"images/grains_on.tga",
 		"images/grains_off.tga",
 		switch_cloud,
-		false,
+		show_cloud,
 		true
 	);
 
@@ -727,7 +767,7 @@ void create_options() {
 		"images/components_on.tga",
 		"images/components_off.tga",
 		switch_components,
-		false,
+		show_structures,
 		true
 	);
 
@@ -737,7 +777,7 @@ void create_options() {
 		"images/boundingbox_on.tga",
 		"images/boundingbox_off.tga",
 		switch_bb,
-		false,
+		show_bb,
 		true
 	);
 
@@ -767,7 +807,7 @@ void create_options() {
 		"images/rainbow_on.tga",
 		"images/rainbow_off.tga",
 		switch_rainbow,
-		false,
+		use_rainbow,
 		true
 	);
 

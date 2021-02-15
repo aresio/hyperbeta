@@ -88,6 +88,8 @@ void key_up_func(unsigned char const key, int const x, int const y)
 	update_key_modifier();
     key_state[key] = false;
 	total_pressed--;
+
+	if (key=='t' || key=='T') show_beta_sheet = !show_beta_sheet;
 		
 	if (key=='o' || key=='O') {		
 		switch_subcomponents();
@@ -152,7 +154,10 @@ void keyfunbase() {
 	if (total_pressed+totalspec_pressed==0) return;
 
 	// quit
-	if (key_state[27]) 	exit(0);
+	if (key_state[27]) {
+		save_settings();
+		exit(0);
+	}
 
 	float delta = frames_motion_blur==1? 1 : 1.f/(frames_motion_blur/2);
 	

@@ -1,7 +1,7 @@
 #ifndef __SERVICE__
 #define __SERVICE__
 
-#define VERSION "1.0.190510"
+#define VERSION "1.2.0"
 
 #include "buttons.h"
 
@@ -20,3 +20,4 @@ void logo() {
 }
 
 #endif __SERVICE__
+

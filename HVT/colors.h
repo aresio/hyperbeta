@@ -14,6 +14,7 @@ const GLfloat white_specular[4] = { 1.f, 1.f, 1.f, 1.f };
 // object colors
 const glm::vec4* cloud_colors = new glm::vec4(0.0, 1.0, 0.0, 1.0);
 const glm::vec4* structure_colors = new glm::vec4(1.0, 0.0, 1.0, 0.6);
+const glm::vec4* beta_colors = new glm::vec4(.8, 0.5, .8, 0.98);
 const glm::vec4* structure_colors_barely = new glm::vec4(1.0, 0.0, 1.0, 0.35);
 const glm::vec4* selected_structure_color = new glm::vec4(1.0, 0.0, 0.0, 0.7);
 const glm::vec4* peptide_color = new glm::vec4(0.7f, 0.7f, 0.7f, 0.5);

@@ -16,6 +16,8 @@ void display_statistics(int  frame, bool const inverted) {
 
 	GLfloat* col = use_dark_skin ? (GLfloat*)clear_color_bright : (GLfloat*)clear_color_dark;
 
+	RenderState.temporary_set_lighting(false);
+
 	// adapting info text
 	displayText((left_display + width_display)+ 80, 33 + vec_freq[frame].size() * 20  , col[0], col[1], col[2], "Grain components", GLUT_BITMAP_HELVETICA_18);
 
@@ -29,6 +31,10 @@ void display_statistics(int  frame, bool const inverted) {
 		displayText((left_display + width_display) + 80 + max_length_grain_name*18 , 10 + n * 20, col[0], col[1], col[2],
 			((std::to_string(frequenza))+"%").c_str(), GLUT_BITMAP_HELVETICA_18);
 	}
+
+	RenderState.recover_lighting();
+
+
 }
 
 

@@ -7,6 +7,7 @@ bool full_screen = false;
 bool use_fog = true;
 bool show_structures = true;
 bool show_cloud = true;
+bool show_beta_sheet = false;
 bool show_bb = true;
 bool only_selected_component = false;
 bool time_inverted = false;
@@ -44,7 +45,7 @@ const float inertia_rotation = 0.8f;
 // depth of field / motion blur settings
 int frame_motion_blur = 0;
 int frames_motion_blur = 8;
-int user_frames_motion_blur = 8;
+int user_frames_motion_blur = 15;
 float dist_focus = 10.;
 GLfloat picked_depth = -1;
 float aperture = 0.05f;
@@ -107,3 +108,107 @@ const glm::vec2 jitters24[24] = {
 };
 
 std::string project_name;
+
+/*
+bool full_screen = false;
+bool use_fog = true;
+bool show_structures = true;
+bool show_cloud = true;
+bool show_beta_sheet = false;
+bool show_bb = true;
+bool only_selected_component = false;
+bool time_inverted = false;
+bool select_peptide = false;
+bool use_rainbow = false;
+bool show_toolbar = true;
+bool use_lod_balancing = true;
+bool approximate_accumbuffer = true;
+bool prepare_to_highquality = false;
+bool show_statistics = true;
+bool simulate_handheld = false;
+bool use_dark_skin = false;
+bool show_tweakbar = false;
+*/
+
+
+void load_settings() {
+	std::cout << " * Trying to load last used settings...";
+
+	ifstream inputfile;
+	inputfile.open(".settings");
+
+	std::string riga,  value;
+	int v;
+	char discard[10];
+	bool status;
+	
+	if (inputfile.good()) {
+		std::cout << " file exists, parsing...";
+
+		while (!inputfile.eof()) {
+
+			//std::cout << std::endl;
+
+			std::getline(inputfile, riga);
+			sscanf(riga.c_str(), "%s : %d", &discard, &v);
+
+			status = (v==1);
+
+			if (std::string(discard) == "SHOWFOG") {
+				use_fog = status;
+			}
+			else if (std::string(discard) == "SHOWSTRUC") {
+				show_structures = status;
+			}
+			else if (std::string(discard) == "SHOWBOBOX") {
+				show_bb = status;
+			}
+			else if (std::string(discard) == "SHOWCLOUD") {
+				show_cloud = status;
+			}
+			else if (std::string(discard) == "SHOWBETA") {
+				show_beta_sheet = status;
+			}
+			else if (std::string(discard) == "DARKTHEME") {
+				use_dark_skin = status;
+			}
+			else if (std::string(discard) == "RAINBOW") {
+				use_rainbow = status;
+			}
+			else if (std::string(discard) == "SELECTPEP") {
+				select_peptide = status;
+			}
+			else {
+				cout << "WARNING: " << discard << " option not supported.\n";
+			}
+
+			//std::cout << discard << " : " << status << std::endl;
+
+		}
+				
+		std::cout << " done.\n";
+	}
+	
+	inputfile.close();
+
+}
+
+void save_settings() {
+	std::cout << " * Trying to save last used settings...";
+	
+	ofstream outputfile;
+	outputfile.open(".settings");
+	
+	outputfile << "SHOWFOG   : " << use_fog << std::endl;
+	outputfile << "SHOWSTRUC : " << show_structures << std::endl;
+	outputfile << "SHOWCLOUD : " << show_cloud << std::endl;
+	outputfile << "SHOWBOBOX : " << show_bb << std::endl;
+	outputfile << "SHOWBETA  : " << show_beta_sheet << std::endl;
+	outputfile << "DARKTHEME : " << use_dark_skin << std::endl;
+	outputfile << "RAINBOW   : " << use_rainbow << std::endl;
+	outputfile << "SELECTPEP : " << select_peptide << std::endl;
+	
+
+	outputfile.close();
+
+}

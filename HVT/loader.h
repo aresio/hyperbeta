@@ -37,11 +37,12 @@ vector<string> split(const char *str, char c = ' ')
 
 
 unsigned int load_structures(
-		std::vector<std::vector<glm::vec3>*>* structures, 
-		const std::string path, 
-		std::vector<std::string> metadata, 
-		std::map<std::string, float>* freq
-	)
+	std::vector<std::vector<glm::vec3>*>* structures,
+	const std::string path,
+	std::vector<std::string> metadata,
+	std::map<std::string, float>* freq,
+	std::vector<std::vector<unsigned int>*>* list_beta_boxes
+)
 {
 
 	unsigned int tot_structures;
@@ -66,16 +67,16 @@ unsigned int load_structures(
 	// read the structures for this snapshot from the separate files
 	// all structures are stored in the same vector
 	structures->clear();
-	for (unsigned int i = 0; i<tot_structures; i++) {
+	for (unsigned int i = 0; i < tot_structures; i++) {
 
 		std::string newpath(path);
 		newpath += "\\coordinate";
 		newpath += std::to_string(i);
 
 		FILE* fp;
-		#pragma warning (disable : 4996)	
+#pragma warning (disable : 4996)	
 		fp = fopen(newpath.c_str(), "r");
-		
+
 		structures->push_back(new std::vector<glm::vec3>());
 
 		// read values
@@ -85,7 +86,7 @@ unsigned int load_structures(
 			structures->back()->push_back(glm::vec3(var1, var2, var3));
 		}
 		fclose(fp);
-		
+
 		tot_triples += structures->back()->size();
 	}
 
@@ -94,7 +95,7 @@ unsigned int load_structures(
 	// read the indices of the structures for this snapshot from the separate files
 	// use the indices to retrieve the types of grains
 	// create a dictionary (freq) with hits for each grain type
-	for (unsigned int i = 0; i<tot_structures; i++) {
+	for (unsigned int i = 0; i < tot_structures; i++) {
 
 		std::string newpath(path);
 		newpath += "\\struttura";
@@ -109,17 +110,49 @@ unsigned int load_structures(
 		while (fscanf(fp, "%d\t%d\t%d", &var1, &var2, &var3) != EOF) {
 
 			auto success = freq->try_emplace(metadata[var1], 1);
-			if (!success.second) freq->at(metadata[var1]) ++;
-			
+			if (!success.second) freq->at(metadata[var1])++;
+
 			success = freq->try_emplace(metadata[var2], 1);
-			if (!success.second) freq->at(metadata[var2]) ++;
-			
+			if (!success.second) freq->at(metadata[var2])++;
+
 			success = freq->try_emplace(metadata[var3], 1);
-			if (!success.second) freq->at(metadata[var3]) ++;
+			if (!success.second) freq->at(metadata[var3])++;
 		}
 		fclose(fp);
 
 	}
+
+
+	// NEW: open beta_groups file to extract info about the detected sheets
+	//      used by non-spherical representation of beta-sheets
+	std::string group_file(path);
+	group_file += std::string("\\beta_groups");
+	fstream infile(group_file);
+	if (infile.is_open()) {
+
+		unsigned int value;
+		list_beta_boxes->push_back(new std::vector<unsigned int>());
+
+		while (infile >> value) {
+			// std::cout << value << std::endl;
+			list_beta_boxes->back()->push_back(value);
+			if (infile.peek() == '\n') {
+				infile.get();
+				if (infile.peek() == '\n') {
+					list_beta_boxes->push_back(new std::vector<unsigned int>());
+					infile.get();
+					if (infile.peek() == '\n') {
+						break;
+					}
+				}
+			}
+		}
+		printf(" * Beta boxes loaded from %s.\n", group_file.c_str());
+	}
+	else {
+		std::cout << "WARNING: cannot open beta groups\n";
+	}
+
 
 	/*std::cout << " DUMP STRUCTURES\n";
 	for (std::map<std::string, float>::iterator it = freq->begin(); it != freq->end(); ++it) {

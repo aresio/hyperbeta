@@ -27,8 +27,8 @@
 #include <math.h>
 #include <algorithm>
 
-#include "Settings.h"
 #include "service.h"
+#include "Settings.h"
 #include "keyboard.h"
 #include "renderer.h"
 #include "buttons.h"
@@ -68,23 +68,28 @@ void actual_render(int mode = 0) {
 	
 		// mouse left button: select grain/peptide
 		case SELECTION_MODE2: 
-			if (show_cloud) drawpoints(SELECTION_MODE2, time_inverted);					
+			if (show_cloud) draw_points(SELECTION_MODE2, time_inverted);					
 			break;
 
 		// mouse right button: select structure
 		case SELECTION_MODE3:
-			if (show_structures) if (mode!=SELECTION_MODE) drawstructures(SELECTION_MODE2, time_inverted);
+			if (show_structures) if (mode!=SELECTION_MODE) draw_structures(SELECTION_MODE2, time_inverted);
 			break;
 
 		// normal rendering
 		default: 
 			
 			RenderState.temporary_set_fog(use_fog);
-			if (show_cloud) drawpoints(0, time_inverted);
+			if (show_cloud) draw_points(0, time_inverted);
 			if (show_bb) draw_bounding_box();
 			if (show_structures) {
-				if (mode!=SELECTION_MODE) drawstructures(0, time_inverted);
-				if (mode!=SELECTION_MODE) drawsticks(time_inverted);
+				if (mode!=SELECTION_MODE) draw_structures(0, time_inverted);
+				if (mode!=SELECTION_MODE) draw_sticks(time_inverted);
+			}
+			if (show_beta_sheet) {
+				if (mode != SELECTION_MODE) {
+					draw_boxes(time_inverted);
+				}
 			}
 			if (select_peptide) {
 				draw_selected_peptide(0, time_inverted);
@@ -136,7 +141,10 @@ void grains_picking() {
 
 		glReadPixels((GLint)last_mouse_click.x, (GLint)(screen_height - last_mouse_click.y), 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, data);
 		pickedID = data[0] + data[1] * 256 + data[2] * 256 * 256;
-
+		if (data[3] == 0) {
+			pickedID = 16777215;
+		}
+		
 	} else if (right_clicked) {
 		actual_render(SELECTION_MODE3);
 
@@ -167,6 +175,7 @@ void display() {
 
 	actual_render();
 		
+	// accumulate buffers for DoF simulation
 	if (open_diaphragm) {
 		if (frame_motion_blur>=frames_motion_blur) {
 			frame_motion_blur=0;			
@@ -191,6 +200,7 @@ void display() {
 	}
 
 
+	// handle mouse click events
 	if (left_clicked | right_clicked) {
 		grains_picking();
 		left_clicked = right_clicked = false;
@@ -198,7 +208,7 @@ void display() {
 	}
 	
 
-	/// The code below is executed only every #frames_motion_blur frames.
+	// The code below is executed only every #frames_motion_blur frames.
 	t+=1.f/(frames_motion_blur);
 	redefine_autorotation_matrix();
 	
@@ -272,7 +282,7 @@ void display() {
 	
 		// information about animation
 		displayText(20.0f, 40.f, 0.1f, 0.1f, 0.2f, std::string("Frame: " + std::to_string(current_frame) + std::string("/") + std::to_string(frame_count)) + std::string(" (") + std::to_string(snapshots) + std::string(" snaps.)"));
-		displayText(20.0f, 20.f, 0.1f, 0.1f, 0.2f, std::string("Time: " + std::to_string(actual_frame) + std::string(" (") + std::to_string(snapshots)) + std::string(") us"));
+		displayText(20.0f, 20.f, 0.1f, 0.1f, 0.2f, std::string("Time: " + std::to_string(actual_frame) + std::string(" (") + std::to_string(snapshots)) + std::string(") ns"));
 
 		if (show_structures)
 			displayText(20.f, 60.f, structure_colors->r*rythm, structure_colors->g*rythm, structure_colors->b, std::string("Components"));
@@ -298,10 +308,19 @@ void display() {
 	
 	// info selected grain
 	if (!(selected_grain<0)) {		
+		RenderState.temporary_set_lighting(false);
 		displayText((GLfloat)screen_width - 110, (GLfloat)screen_height - 40, 0, 0, 0, vec_metadata[0][selected_grain].c_str(), GLUT_BITMAP_8_BY_13);
 		displayText((GLfloat)screen_width - 111, (GLfloat)screen_height - 39, 1, 1, 1, vec_metadata[0][selected_grain].c_str(), GLUT_BITMAP_8_BY_13);
 		displayText((GLfloat)screen_width - 110, (GLfloat)screen_height - 60, 0.3f, 0.15f, 0.2f, std::string("Peptide #") + vec_metadata3[0][selected_grain].c_str(), GLUT_BITMAP_8_BY_13);
 		displayText((GLfloat)screen_width - 111, (GLfloat)screen_height - 59, 1.f, 1.f, 1.f, std::string("Peptide #") + vec_metadata3[0][selected_grain].c_str(), GLUT_BITMAP_8_BY_13);
+		
+		displayText((GLfloat)screen_width - 110, (GLfloat)screen_height - 80, 0.3f, 0.15f, 0.2f, std::string("Grain #") + std::to_string(selected_grain%grouplength), GLUT_BITMAP_8_BY_13);
+		displayText((GLfloat)screen_width - 111, (GLfloat)screen_height - 79, 1.f, 1.f, 1.f, std::string("Grain #") + std::to_string(selected_grain%grouplength), GLUT_BITMAP_8_BY_13);
+
+		displayText((GLfloat)screen_width - 110, (GLfloat)screen_height - 100, 0.3f, 0.15f, 0.2f, std::string("Index #") + std::to_string(selected_grain), GLUT_BITMAP_8_BY_13);
+		displayText((GLfloat)screen_width - 111, (GLfloat)screen_height - 99, 1.f, 1.f, 1.f, std::string("Index #") + std::to_string(selected_grain), GLUT_BITMAP_8_BY_13);
+
+		RenderState.recover_lighting();
 	}
 
 	// statistics about grains
@@ -476,6 +495,7 @@ int main(int argc, char** argv) {
 		std::vector<std::string> metadata2;
 		std::vector<std::string> metadata3;
 		std::vector<std::vector<glm::vec3>*> stru;
+		std::vector<std::vector<unsigned int>*> boxes;
 
 		unsigned int total_grains = load_point_cloud(&nuvola, &metadata, &metadata2, &metadata3, argv[1]+std::string("/")+argv[2]+"_"+std::to_string(i));
 		
@@ -486,20 +506,20 @@ int main(int argc, char** argv) {
 
 		std::map<std::string, float> freq;
 
-		unsigned int total_triples = load_structures(&stru, argv[1]+std::string("/output_")+argv[2]+"_"+std::to_string(i), metadata, &freq);
+		unsigned int total_triples = load_structures(&stru, argv[1] + std::string("/output_") + argv[2] + "_" + std::to_string(i), metadata, &freq, &boxes);
 	
 		vec_freq.push_back(freq);
 
 		if (total_triples>max_triples) max_triples = total_triples;
 		triples_per_snapshot.push_back(total_triples);
 		vec_structures.push_back(stru);
+		vec_boxes.push_back(boxes);
 
 		violet_green_ratio.push_back((float)(total_triples/3)/total_grains);
 
 	}
 
-	printf(" * Total detected peptides: %d.\n", point_clouds[0].size() / grouplength);
-
+	printf(" * Total detected peptides: %zd.\n", point_clouds[0].size() / grouplength);
 
 	maxdistance = glm::distance(max_coord, min_coord);
 
@@ -509,7 +529,7 @@ int main(int argc, char** argv) {
 	
 	glutInit(&argc, (char**)argv);
 	glutSetOption(GLUT_MULTISAMPLE, 8);
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH | GLUT_MULTISAMPLE);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_ALPHA |  GLUT_DEPTH | GLUT_MULTISAMPLE);
 	glEnable(GL_MULTISAMPLE);
 	glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
 	glutInitWindowSize(screen_width,screen_height);
@@ -532,6 +552,7 @@ int main(int argc, char** argv) {
 	glutIdleFunc(display);	  
 	glutTimerFunc(10, update_vels, 10);
 
+	load_settings();
 	create_options();
 
 	init();
