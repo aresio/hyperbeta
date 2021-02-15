@@ -1,9 +1,10 @@
 import sys
-from PyQt4 import QtGui, QtCore, uic
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+from PyQt5 import uic
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import * 
+from PyQt5.QtGui import *
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
 from subprocess import Popen, PIPE, STDOUT, check_output
 import os
@@ -11,10 +12,10 @@ from numpy import savetxt
 import res3
 
 
-class MyThread(QtCore.QThread):
+class MyThread(QThread):
 
-	trigger = QtCore.pyqtSignal(float)
-	completed = QtCore.pyqtSignal()
+	trigger = pyqtSignal(float)
+	completed = pyqtSignal()
 
 	def __init__(self, parent=None):
 		super(MyThread, self).__init__(parent)
@@ -48,18 +49,20 @@ class MyThread(QtCore.QThread):
 
 
 
-class ImportDialog(QtGui.QDialog):
+class ImportDialog(QDialog):
 	
 	def __init__(self):
 		super(ImportDialog, self).__init__()
 		uic.loadUi('importgro.ui', self)
 		self.local_folder = None
 		self.inputgrofile = None
-		self.script_path = "algorithm.py"
+		working_path = os.path.dirname(os.path.realpath(__file__))
+		self.script_path = working_path + os.sep+"algorithm.py"
+		print(" * HyperBeta's algorithm will be run from:", self.script_path)
 
 
 	def openmd(self):
-		file_ = QtGui.QFileDialog.getOpenFileName(None, 'Select a GROMACS file:', self.local_folder, "GROMACS files (*.gro)")
+		file_, _ = QFileDialog.getOpenFileName(None, 'Select a GROMACS file:', self.local_folder, "GROMACS files (*.gro)")
 		if file_!="":
 			print (" * Opening GRO animation file", file_)
 			self.inputgro.setText(file_)
@@ -79,20 +82,20 @@ class ImportDialog(QtGui.QDialog):
 		with open(fi) as infi:			
 			A = infi.readlines()		
 		B = zip(A,range(len(A)))
-		C = filter(lambda x: "Generated" in x[0], B)
+		C = list(filter(lambda x: "Generated" in x[0], B))
 		if len(C)<2:
 			import shutil
 			shutil.copyfile(fi, dirname+"/snapshot_0")
 			return
 		
 		I = [i[1] for i in C]
-		for n in xrange(len(I)-1):
+		for n in range(len(I)-1):
 			nextfile = dirname+"/snapshot_"+str(n)
 			if os.path.isfile(nextfile) and self.skipexisting.isChecked():
 				print (nextfile, "already exists: skipping")
 			else:
 				with open(dirname+"/snapshot_"+str(n), "w") as fo: #versione normale
-					for i in xrange(I[n], I[n+1]):
+					for i in range(I[n], I[n+1]):
 						fo.write(A[i])
 
 
@@ -112,7 +115,7 @@ class ImportDialog(QtGui.QDialog):
 		dirname = "./exploded_"+os.path.basename(str(self.inputgro.text()))			
 		
 		QApplication.setOverrideCursor(Qt.WaitCursor)
-		for i in xrange(first_snapshot, last_snapshot):
+		for i in range(first_snapshot, last_snapshot):
 			command = ["python", self.script_path, ".", "snapshot_"+str(i), "-a", str(ang_threshold), "-d", str(dist_threshold) ]
 			print (" ".join(command))
 			ret = check_output(command)
@@ -123,7 +126,7 @@ class ImportDialog(QtGui.QDialog):
 		
 
 
-class MyWindow(QtGui.QMainWindow):
+class MyWindow(QMainWindow):
 
 	
 	def __init__(self):
@@ -132,7 +135,7 @@ class MyWindow(QtGui.QMainWindow):
 		
 		self.show()
 		
-		self.progressBar = QtGui.QProgressBar()
+		self.progressBar = QProgressBar()
 		self.progressBar.setMinimum(0)
 		self.progressBar.setMaximum(100)
 		self.statusBar().addPermanentWidget(self.progressBar)
@@ -175,7 +178,7 @@ class MyWindow(QtGui.QMainWindow):
 		local = os.path.abspath(str(self.path.text()))
 		print (local)
 		#if local=="": local= os.path.abspath(".")
-		dir_ = QtGui.QFileDialog.getExistingDirectory(None, 'Select a folder:', local, QtGui.QFileDialog.ShowDirsOnly)
+		dir_ = QFileDialog.getExistingDirectory(None, 'Select a folder:', local, QFileDialog.ShowDirsOnly)
 		if dir_!="":
 			self.path.setText(dir_)
 			with open(".last", "w") as fo:
@@ -184,7 +187,7 @@ class MyWindow(QtGui.QMainWindow):
 	def browse_executable(self):				
 		local = os.path.abspath(str(self.path.text()))
 		print (local)
-		executable_ = QFileDialog.getOpenFileName(self, 'Open executable file', '.', "Image files (*.exe)")
+		executable_, _ = QFileDialog.getOpenFileName(self, 'Open executable file', '.', "Image files (*.exe)")
 		if executable_!="":
 			self.path_to_hvt.setText(executable_)
 			with open(".exec", "w") as fo:
@@ -243,7 +246,7 @@ class MyWindow(QtGui.QMainWindow):
 
 if __name__ == '__main__':
 
-	app = QtGui.QApplication(sys.argv)
+	app = QApplication(sys.argv)
 	importgro = ImportDialog()
 	window = MyWindow()
 	

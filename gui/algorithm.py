@@ -1,8 +1,7 @@
-from pylab import *
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
 from math import acos, pi
-from networkx import *
+from networkx import connected_components, Graph
+from numpy import loadtxt, savetxt, genfromtxt, array
+from numpy.linalg import norm
 import errno
 import os, shutil
 import argparse
@@ -37,37 +36,31 @@ if __name__ == '__main__':
 	nosave  = args.nosave
 
 	if nosave:
-		print " * Not saving distance matrix"
+		print (" * Not saving distance matrix")
 
 	input_folder = args.input_folder
 	file_name    = args.file_name
 
 	try:
-		GROUPSIZE = int(loadtxt(input_folder+"/grouplength"))
-		print " * Using groupsize", GROUPSIZE
-	except:
-		print "ERROR: cannot retrieve 'grouplength' file in input folder", input_folder
+		GROUPSIZE = int(loadtxt(input_folder+os.sep+"grouplength"))
+		print (" * Using groupsize", GROUPSIZE)
+	except FileNotFoundError:
+		print( "ERROR: cannot retrieve 'grouplength' file in input folder", input_folder)
 		exit(2)
 
-	# BB_peptide
-	# dm500B30M3p1.gro <--- target normale
-	# 2fkg_clear       <--- completamente ordinata
-	# B26_olig1        <--- completamente disordinata	
-
-	# A = genfromtxt("dm500B30M3p1.gro", skiprows=2, skip_footer=1, dtype={'names': ('ammino', 'boh', 'id', 'x', 'y', 'z'), 'formats': ('S1', 'S2', int, float, float, float) })
-	A = genfromtxt(input_folder+"/"+file_name, skip_header=2, skip_footer=1, dtype={'names': ('ammino', 'boh', 'id', 'x', 'y', 'z'), 'formats': ('S1', 'S2', int, float, float, float) })
+	
+	A = genfromtxt(input_folder+os.sep+file_name, skip_header=2, skip_footer=1, dtype={'names': ('ammino', 'boh', 'id', 'x', 'y', 'z'), 'formats': ('S1', 'S2', int, float, float, float) })
 
 	B = [ array([x,y,z]) for a,b,c,x,y,z in A ]
 
-	THRESHOLD_DIST=args.distance_threshold		# angstrom
-	THRESHOLD_ANG =args.angular_threshold		# 95% pi
-	#GROUPSIZE = 11			# 11 = dm500, B26_olig1 = 11, 2fkg = 8
-	print " * Using distance", args.distance_threshold, "and angle", args.angular_threshold
+	THRESHOLD_DIST=args.distance_threshold		
+	THRESHOLD_ANG =args.angular_threshold		
+	print (" * Using distance", args.distance_threshold, "and angle", args.angular_threshold)
 	
 	G = Graph()
 
 	if precalc:
-		D = loadtxt("distances_"+file_name)
+		D = loadtxt(input_folder+os.sep+"distances_"+file_name)
 	else:
 		D = []
 		for n,b1 in enumerate(B):
@@ -80,79 +73,81 @@ if __name__ == '__main__':
 			D.append(temp)
 		if not nosave: savetxt("distances"+file_name,  D)
 
+	sets_beta_peptides = [set() for _ in range(len(B)//GROUPSIZE+1)]
+	
 	lista_supernodi = []	
 	for n1, b1 in enumerate(B):				
 		for n2, b2 in enumerate(B):
-			if n1/GROUPSIZE==n2/GROUPSIZE: continue
+			if n1//GROUPSIZE==n2//GROUPSIZE: continue
 			if D[n1][n2]>THRESHOLD_DIST: continue
 			if n1==n2: continue
 			for n3, b3 in enumerate(B):				
-				if n1/GROUPSIZE==n3/GROUPSIZE or n2/GROUPSIZE==n3/GROUPSIZE: continue
+				if n1//GROUPSIZE==n3//GROUPSIZE or n2//GROUPSIZE==n3//GROUPSIZE: continue
 				if n2==n3 or n1==n3: continue
 				if D[n2][n3]>THRESHOLD_DIST:
 					pass
 				else:					
 					if angle_from_points(b1,b2,b3)>THRESHOLD_ANG:
 						lista_supernodi.append(set([n1,n2,n3]))
+						sets_beta_peptides[n1//GROUPSIZE].add( n1 )
 
 	for sn1 in lista_supernodi:
 		for sn2 in lista_supernodi:
 			if len(sn1.intersection(sn2))>1:
 				G.add_edge(str(tolist(sn1)), str(tolist(sn2)))
 
-	# print lista_supernodi
 	CC = connected_components(G)
-	CC = filter(lambda x: len(x)>1, CC)
+	CC = list(filter(lambda x: len(x)>1, CC))
 
-	"""
-	for (x,y,z) in B:
-		ax.scatter([x],[y],zs=[z], c="b", alpha=0.5)
-	"""
-	
+	flattened = []
+	for comp in CC:
+		for sublist in comp:
+			flattened.extend (eval(sublist))
+	flattened = sorted(set(flattened))
+
+	pos = 0
+	broken = [[]]
+	while(pos<len(flattened)-1):
+		if flattened[pos]==flattened[pos+1]-1:
+			broken[-1].append(flattened[pos])
+		else:
+			broken[-1].append(flattened[pos])
+			broken.append([])
+		pos+=1
+		if flattened[pos]%GROUPSIZE==0:
+			broken.append([])
+
+	groups = list(filter(lambda x: len(x)>1, broken))
+
 	OUTDIR = input_folder+"/output_"+file_name.replace('/', '_').replace(".", "_")
-	print " * Saving structures in", OUTDIR
-	
+	print (" * Saving structures in", OUTDIR)
+
 	try:
 		os.mkdir(OUTDIR)
 	except OSError as exception:
 		if exception.errno == errno.EEXIST:
-			print "WARNING: directry exists"
+			print ("WARNING: directry exists")
 		else:
-			print exception
-			print "Unhandled ERROR"; exit(3)
-		#shutil.rmtree(OUTDIR)
-		#os.mkdir(OUTDIR)		
-		pass
+			print (exception)
+			print ("Unhandled ERROR"); exit(3)
 
 	for n,c in enumerate(CC):
-		strut = map(lambda x: eval(x), c)
+		strut = [eval(x) for x in c]
 		coords = map(lambda x: [B[x[0]], B[x[1]], B[x[2]]], strut )
 		savetxt(OUTDIR+"/struttura"+str(n), strut, fmt="%d\t%d\t%d")
-		#savetxt("coordinate"+str(n), coords, fmt="%f\t%f\t%f")
 		with open(OUTDIR+"/coordinate"+str(n), "w") as fo:
 			for tripla in coords:
-				#tripla = matrix(tripla).reshape(3,3)
 				T1 = tripla[0]
 				T2 = tripla[1]
-				T3 = tripla[2]		
-				"""
-				ax.scatter(T1[0], T1[1], zs=T1[2], c="r")
-				ax.scatter(T2[0], T2[1], zs=T2[2], c="r")
-				ax.scatter(T3[0], T3[1], zs=T3[2], c="r")
-				"""
+				T3 = tripla[2]						
 				fo.write("\t".join(map(str, T1))+"\n")
 				fo.write("\t".join(map(str, T2))+"\n")
 				fo.write("\t".join(map(str, T3))+"\n")
 
-	print  " *", len(CC), "structures detected"
+	print  (" *", len(CC), "structures detected")
 	savetxt(OUTDIR+"/structures", [len(CC)], fmt="%d")
-
-		#print tripla.T[0][0], tripla.T[1][0], tripla.T[2][0]
-		#ax.scatter(tripla.T[0], tripla.T[1], zs=tripla.T[2])
-		#ax.scatter(coords)
-	#show()
-
-		#ax.scatter()
-	#show()
 	
-
+	with open(OUTDIR+os.sep+"beta_groups", "w") as fo:
+		for group in groups:
+			fo.write("\n".join(map(str, group)))
+			fo.write("\n\n")
