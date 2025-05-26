@@ -25,4 +25,4 @@ A Visual Studio solution file is available in the root of the repository.
 
 # Further information
 
-If you need assistance with HyperBeta please contact: Marco S. Nobile (m.s.nobile@tue.nl)
+If you need assistance with HyperBeta please contact: Marco S. Nobile (marco.nobile@unive.it)
